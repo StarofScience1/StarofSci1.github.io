@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<center>
+
+<head>
+    <meta charset="UTF-8">
+　　<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+    <title>100マス計算特訓サイト</title>
+
+    <style>
+
+body {
+
+    margin: 0;
+
+}
+
+p {
+
+    margin: 0;
+
+}
+
+button {
+    width: 150px;
+    height: 60px;
+    font-size: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 5px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+#timer {
+    font-size: 40px;
+    font-weight: bold;
+    margin: 5px;
+}
+
+#score {
+    font-size: 40px;
+    font-weight: bold;
+　　margin: 5px;
+}
+
+#modeDisplay {
+    font-size: 40px;
+}
+
+#ruleText {
+    font-size: 40px;
+}
+
+#topBar {
+ 
+display: flex;
+justify-content: center;
+align-items: center;
+gap: 5px;
+ 
+}
+
+#gameContainer {
+
+    overflow-x: auto;
+
+}
+
+#subtitle {
+
+    font-size: 80px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+
+}
+
+#modeButtons {
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+
+}
+
+.cell {
+    width: 40px;
+    height: 40px;
+　　line-height: 40px;
+　　font-size: 40px;
+　　text-align: center !important;
+　　box-sizing: border-box;
+　　padding: 0;
+　　background-color: lightblue;
+}
+
+.cell:focus {
+    text-align: center;
+}
+
+th {
+    width: 40px;
+    height: 40px;
+    text-align: center;
+
+button.selected {
+    background-color: orange;
+}
+
+@media (max-width: 768px) {
+
+    button {
+
+        width: 100%;
+        max-width: 300px;
+
+    }
+
+    .cell {
+
+        width: 50px;
+        height: 50px;
+        font-size: 25px;
+
+    }
+
+    #topBar {
+
+        flex-direction: column;
+        flex-wrap: wrap;
+    }
+}
+
+    </style>
+
+</head>
+<body>
+
+<p id="subtitle">
+    ＋　ー　100マス計算　×　÷
+</p>
+
+<p id="modeDisplay">
+    モード未選択
+</p>
+
+<p id="ruleText">
+    モードを選択してください
+</p>
+
+<div id="modeButtons">
+
+<button id="plusBtn" onclick="selectMode('+')">＋</button>
+<button id="minusBtn" onclick="selectMode('-')">－</button>
+<button id="multiBtn" onclick="selectMode('*')">×</button>
+<button id="divBtn" onclick="selectMode('/')">÷</button>
+
+</div>
+
+<div id="topBar">
+
+<button id="startBtn"
+        onclick="startGame()">
+    スタート
+</button>
+
+    <div id="timer"></div>
+
+　　<div id="score"></div>
+
+<button id="checkBtn"
+        onclick="checkAnswers()"
+        style="display:none;">
+    回答決定
+</button>
+
+<button id="resumeBtn"
+        onclick="resumeGame()"
+        style="display:none;">
+    再開
+</button>
+
+<button id="resetBtn"
+        onclick="resetGame()"
+        style="display:none;">
+    リセット
+</button>
+
+</div>
+
+
+    <div id="gameContainer">
+    <div id="game"></div>
+</div>
+
+    <script>
+
+let startTime;
+let timerId;
+
+let operation = "";
+
+let elapsedTime = 0;
+
+function createNumbers(min, max) {
+
+    const numbers = [];
+
+    while(numbers.length < 10) {
+
+        let number =
+            Math.floor(Math.random() * (max - min + 1))
+            + min;
+
+        if(!numbers.includes(number)) {
+            numbers.push(number);
+        }
+    }
+
+    return numbers;
+}
+
+
+function selectMode(mode) {
+
+    operation = mode;
+
+    document.getElementById("plusBtn").style.backgroundColor = "";
+    document.getElementById("minusBtn").style.backgroundColor = "";
+    document.getElementById("multiBtn").style.backgroundColor = "";
+    document.getElementById("divBtn").style.backgroundColor = "";
+
+    if(mode === "+") {
+
+        document.getElementById("plusBtn")
+            .style.backgroundColor = "orange";
+
+        document.getElementById("modeDisplay").textContent =
+            "選択中：足し算";
+    
+    document.getElementById("ruleText").innerHTML =
+        "2桁どうしの足し算です。<br>繰り上がって3桁になる場合があります。";
+
+}
+
+    if(mode === "-") {
+
+        document.getElementById("minusBtn")
+            .style.backgroundColor = "orange";
+
+        document.getElementById("modeDisplay").textContent =
+            "選択中：引き算";
+
+    document.getElementById("ruleText").innerHTML =
+        "3桁-2桁の引き算です。<br>左に書かれている数から上に書かれている数を引いてください。";
+    }
+
+    if(mode === "*") {
+
+        document.getElementById("multiBtn")
+            .style.backgroundColor = "orange";
+
+        document.getElementById("modeDisplay").textContent =
+            "選択中：掛け算";
+
+    document.getElementById("ruleText").innerHTML =
+        "1～2桁どうしの掛け算です。<br>繰り上がって3桁になる場合があります。";
+    }
+
+    if(mode === "/") {
+
+        document.getElementById("divBtn")
+            .style.backgroundColor = "orange";
+
+        document.getElementById("modeDisplay").textContent =
+            "選択中：割り算";
+
+    document.getElementById("ruleText").innerHTML =
+        "3桁÷1～2桁の割り算です。<br>左に書かれている数から上に書かれている数を割ってください。<br>答えが分数になる場合は「(分子)/(分母)」の形で<br>既約分数にして回答してください。";
+    }
+}
+
+
+function gcd(a, b) {
+
+    while(b !== 0) {
+
+        let temp = b;
+        b = a % b;
+        a = temp;
+
+    }
+
+    return a;
+
+}
+
+
+function updateTimer() {
+
+    const elapsed =
+        Math.floor((Date.now() - startTime) / 1000);
+
+    const minutes =
+        Math.floor(elapsed / 60);
+
+    const seconds =
+        elapsed % 60;
+
+    document.getElementById("timer").textContent =
+        `経過時間：${minutes.toString().padStart(2, "0")}分${seconds.toString().padStart(2, "0")}秒`;
+
+}
+
+
+function startGame() {
+
+document.getElementById("startBtn")
+    .style.display = "none";
+
+document.getElementById("checkBtn")
+    .style.display = "inline-block";
+
+    if(operation === "") {
+
+        alert("モードを選択してください");
+
+        return;
+
+    }
+
+clearInterval(timerId);
+
+    document.getElementById("score").textContent = "";
+
+  startTime = Date.now();
+
+    timerId = setInterval(updateTimer, 100);
+
+let topNumbers;
+let leftNumbers;
+
+if(operation === "+") {
+
+    topNumbers = createNumbers(10, 99);
+    leftNumbers = createNumbers(10, 99);
+
+}
+
+if(operation === "-") {
+
+    topNumbers = createNumbers(10, 99);
+    leftNumbers = createNumbers(100, 999);
+
+}
+
+if(operation === "*") {
+
+    topNumbers = createNumbers(3, 19);
+    leftNumbers = createNumbers(3, 19);
+
+}
+
+if(operation === "/") {
+
+    topNumbers = createNumbers(3, 19);
+    leftNumbers = createNumbers(100, 400);
+
+}
+
+            let html = "<table border='1'>";
+
+html += "<tr>";
+
+html += `<th>${operation}</th>`;
+
+for(let i = 0; i < 10; i++) {
+
+    html += `<th>${topNumbers[i]}</th>`;
+
+}
+
+html += "</tr>";for(let row = 0; row < 10; row++) {
+
+    html += "<tr>";
+
+    html += `<th>${leftNumbers[row]}</th>`;
+
+    for(let col = 0; col < 10; col++) {
+
+
+let answer;
+
+if(operation === "+") {
+
+    answer =
+        leftNumbers[row] + topNumbers[col];
+
+}
+
+if(operation === "-") {
+
+    answer =
+        leftNumbers[row] - topNumbers[col];
+
+}
+
+if(operation === "*") {
+
+    answer =
+        leftNumbers[row] * topNumbers[col];
+
+}
+
+if(operation === "/") {
+
+    let numerator =
+        leftNumbers[row];
+
+    let denominator =
+        topNumbers[col];
+
+    let g =
+        gcd(numerator, denominator);
+
+    numerator =
+        numerator / g;
+
+    denominator =
+        denominator / g;
+
+    if(denominator === 1) {
+
+        answer = `${numerator}`;
+
+    }
+    else {
+
+        answer =
+            `${numerator}/${denominator}`;
+
+    }
+
+}
+
+html += `
+    <td>
+        <input
+            type="text"
+　　　　　  class="cell"
+            data-answer="${answer}"
+　　　　　  style="text-align:center; background-color:lightblue;"
+            onkeydown="moveCell(event)"
+            maxlength="10"
+            oninput="this.value=this.value.replace(/[^0-9/]/g,'')">
+    </td>
+`;
+    }
+
+    html += "</tr>";
+}
+            html += "</table>";
+
+            document.getElementById("game").innerHTML = html;
+
+setTimeout(() => {
+
+document.querySelector(".cell")
+    .focus();
+
+document.getElementById("game")
+    .scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+    });
+
+}, 100);
+
+}
+
+document.querySelector(".cell").focus();
+
+function checkAnswers() {
+
+    elapsedTime =
+        Date.now() - startTime;
+
+    clearInterval(timerId);
+
+let score = 0;
+
+    const inputs =
+        document.querySelectorAll("input");
+
+for(let input of inputs) {
+
+    input.style.backgroundColor =
+        "lightblue";
+
+const answer =
+    input.dataset.answer;
+
+if(input.value === "") {
+
+    continue;
+
+}
+
+
+
+if(operation === "/") {
+
+    const userAnswer =
+        input.value.replace(/\s/g, "");
+
+    if(userAnswer === answer) {
+
+        score++;
+
+        input.style.backgroundColor =
+            "lightgreen";
+
+    }
+    else {
+
+        input.style.backgroundColor =
+            "salmon";
+
+    }
+
+}
+else {
+
+    const userAnswer =
+        Number(input.value);
+
+    if(userAnswer === Number(answer)) {
+
+        score++;
+
+        input.style.backgroundColor =
+            "lightgreen";
+
+    }
+    else {
+
+        input.style.backgroundColor =
+            "salmon";
+
+    }
+
+}
+
+}
+
+    document.getElementById("score").textContent =
+        `点数：${score}点！`;
+
+document.getElementById("checkBtn")
+    .style.display = "none";
+
+document.getElementById("resumeBtn")
+    .style.display = "inline-block";
+
+document.getElementById("resetBtn")
+    .style.display = "inline-block";
+
+for(let input of document.querySelectorAll(".cell")) {
+
+    input.disabled = true;
+
+}
+
+
+}
+
+function moveCell(event) {
+
+    const inputs =
+        Array.from(
+            document.querySelectorAll(".cell")
+        );
+
+    const current =
+        inputs.indexOf(event.target);
+
+    const row =
+        Math.floor(current / 10);
+
+    const col =
+        current % 10;
+
+if(event.key === "ArrowRight") {
+
+        if(col === 9) {
+
+            inputs[row * 10].focus();
+
+        }
+        else {
+
+            inputs[current + 1].focus();
+
+        }
+
+    }
+
+    if(event.key === "ArrowLeft") {
+
+        if(col === 0) {
+
+            inputs[row * 10 + 9].focus();
+
+        }
+        else {
+
+            inputs[current - 1].focus();
+
+        }
+
+    }
+
+    if(event.key === "ArrowDown") {
+
+        if(row === 9) {
+
+            inputs[col].focus();
+
+        }
+        else {
+
+            inputs[current + 10].focus();
+
+        }
+
+    }
+
+    if(event.key === "ArrowUp") {
+
+        if(row === 0) {
+
+            inputs[90 + col].focus();
+
+        }
+        else {
+
+            inputs[current - 10].focus();
+
+        }
+
+    }
+
+}
+
+function resumeGame() {
+
+    startTime =
+        Date.now() - elapsedTime;
+
+    timerId =
+        setInterval(updateTimer, 100);
+
+　　document.getElementById("score")
+  　　  .textContent = "";
+
+    document.getElementById("checkBtn")
+        .style.display = "inline-block";
+
+    document.getElementById("resumeBtn")
+        .style.display = "none";
+
+    document.getElementById("resetBtn")
+        .style.display = "none";
+
+const inputs =
+    document.querySelectorAll(".cell");
+
+for(let input of inputs) {
+
+    input.disabled = false;
+
+}
+
+　　document.getElementById("game")
+    .scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+    });
+
+}
+
+function resetGame() {
+
+    clearInterval(timerId);
+
+    document.getElementById("game")
+        .innerHTML = "";
+
+    document.getElementById("score")
+        .textContent = "";
+
+    document.getElementById("timer")
+        .textContent = "";
+
+    document.getElementById("startBtn")
+        .style.display = "inline-block";
+
+    document.getElementById("checkBtn")
+        .style.display = "none";
+
+    document.getElementById("resumeBtn")
+        .style.display = "none";
+
+    document.getElementById("resetBtn")
+        .style.display = "none";
+
+}
+
+    </script>
+
+</body>
+
+</ccenter>
+
+</html>
